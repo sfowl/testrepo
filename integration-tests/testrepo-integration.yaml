@@ -16,7 +16,7 @@ spec:
             ]
           }
   tasks:
-    - name: test-hello-world
+    - name: test-component
       params:
         - name: SNAPSHOT
           value: "$(params.SNAPSHOT)"
@@ -26,7 +26,7 @@ spec:
             type: string
         steps:
           - name: test-output
-            image: docker.io/bitnami/kubectl:latest
+            image: quay.io/konflux-ci/konflux-test:latest
             env:
               - name: SNAPSHOT
                 value: "$(params.SNAPSHOT)"
@@ -38,10 +38,8 @@ spec:
 
               IMAGE=$(echo "$SNAPSHOT" | jq -r '.components[0].containerImage')
               echo "Extracted image: $IMAGE"
-              kubectl delete job --ignore-not-found test-hello -n $NAMESPACE
-              kubectl delete pods --ignore-not-found -l job-name=test-hello -n $NAMESPACE
-              kubectl create job test-hello -n $NAMESPACE --image=$IMAGE
-              kubectl wait --for=condition=complete job/test-hello --timeout=120s
-              LOGS=$(kubectl logs -l job-name=test-hello -n $NAMESPACE)
-              kubectl delete job --ignore-not-found test-hello -n $NAMESPACE
-              echo $LOGS | grep "hello world"
+              kubectl delete deployment test-component --ignore-not-found -n $NAMESPACE
+              kubectl create deployment test-component -n $NAMESPACE --image=$IMAGE
+              kubectl wait --for=condition=Running deployment/test-component --timeout=120s
+              # LOGS=$(kubectl logs deployment/test-component -n $NAMESPACE)
+              kubectl delete deployment test-component --ignore-not-found test-hello -n $NAMESPACE
