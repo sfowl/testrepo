@@ -1,3 +1,3 @@
 #!/bin/bash -e
 
-echo "hello world"
+python3 -m http.server 8080
