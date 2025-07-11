@@ -112,6 +112,12 @@ spec:
               oc get deployment test-component -o yaml
               sleep 20
               oc get pods -o yaml
+              oc get deployment -o yaml
+              oc logs deployment test-component
+              sleep 20
+              oc get pods -o yaml
+              oc get deployment -o yaml
+              oc logs deployment test-component
 
               oc wait --for=condition=Running deployment/test-component --timeout=120s
               # LOGS=$(kubectl logs deployment/test-component
