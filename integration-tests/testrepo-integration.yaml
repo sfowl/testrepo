@@ -49,8 +49,8 @@ spec:
             env:
               - name: SNAPSHOT
                 value: "$(params.SNAPSHOT)"
-              - name: NAMESPACE
-                value: "$(context.pipelineRun.namespace)"
+              - name: KUBECONFIG
+                value: /tmp/kubeconfig.yml
               - name: KUBECONFIG_VALUE
                 valueFrom:
                   secretKeyRef:
@@ -63,7 +63,9 @@ spec:
               IMAGE=$(echo "$SNAPSHOT" | jq -r '.components[0].containerImage')
               echo "Extracted image: $IMAGE"
 
+              cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
+
               kubectl delete deployment test-component --ignore-not-found
               kubectl create deployment test-component --image=$IMAGE
               kubectl wait --for=condition=Running deployment/test-component --timeout=120s
-              # LOGS=$(kubectl logs deployment/test-component -n $NAMESPACE)
+              # LOGS=$(kubectl logs deployment/test-component
