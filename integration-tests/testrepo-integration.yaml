@@ -33,6 +33,7 @@ spec:
         - name: ownerUid
           value: $(context.pipelineRun.uid)
 
+    # use image from snapshot in new deployment in fresh environment
     - name: deploy-app
       params:
         - name: SNAPSHOT
@@ -43,29 +44,69 @@ spec:
         params:
           - name: SNAPSHOT
             type: string
+        volumes:
+          - name: credentials
+            emptyDir: {}
         steps:
-          # use image from snapshot in new deployment in fresh environment
-          - image: quay.io/konflux-ci/konflux-test:latest
+          # write the kubeconfig to a volume we can use in subsequent steps
+          # and emptyDir volume will be exist for the lifetime of a single taskRun
+          - name: get-kubeconfig
+            image: quay.io/konflux-ci/konflux-test:latest
             env:
-              - name: SNAPSHOT
-                value: "$(params.SNAPSHOT)"
               - name: KUBECONFIG
-                value: /tmp/kubeconfig.yml
+                value: /credentials/kubeconfig.yml
               - name: KUBECONFIG_VALUE
                 valueFrom:
                   secretKeyRef:
                     name: "$(tasks.provision-env.results.secretRef)"
                     key: kubeconfig
+            volumeMounts:
+              - name: credentials
+                mountPath: /credentials
             script: |
-              #!/usr/bin/bash
+              #!/bin/bash
+              set -euxo pipefail
+
+              cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
+              echo "Wrote kubeconfig for new environment to $KUBECONFIG"
+
+          # we need to copy secrets into our new namespace, including the pull secret
+          # for our SNAPSHOT image stored in a private quay repo
+          - name: copy-secrets
+            image: quay.io/konflux-ci/konflux-test:latest
+            env:
+              - name: DEST_KUBECONFIG
+                value: /credentials/kubeconfig.yml
+            volumeMounts:
+              - name: credentials
+                mountPath: /credentials
+            script: |
+              #!/bin/bash
+              set -euxo pipefail
+
+              oc get secrets -o json | jq 'del(.items[] | .metadata.creationTimestamp,
+                .metadata.uid, .metadata.resourceVersion,
+                .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration")' \
+              | oc apply --kubeconfig=$DEST_KUBECONFIG -f -
+
+          - name: deploy-app
+            image: quay.io/konflux-ci/konflux-test:latest
+            env:
+              - name: SNAPSHOT
+                value: "$(params.SNAPSHOT)"
+              - name: KUBECONFIG
+                value: /credentials/kubeconfig.yml
+            volumeMounts:
+              - name: credentials
+                mountPath: /credentials
+            script: |
+              #!/bin/bash
               set -euxo pipefail
 
               IMAGE=$(echo "$SNAPSHOT" | jq -r '.components[0].containerImage')
               echo "Extracted image: $IMAGE"
 
-              cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
-
-              kubectl delete deployment test-component --ignore-not-found
               kubectl create deployment test-component --image=$IMAGE
+              kubectl get deployment test-component -o yaml 
               kubectl wait --for=condition=Running deployment/test-component --timeout=120s
               # LOGS=$(kubectl logs deployment/test-component
