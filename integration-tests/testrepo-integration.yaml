@@ -88,8 +88,8 @@ spec:
                 .metadata.uid, .metadata.resourceVersion,
                 .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration",
                 .metadata.namespace)' > /tmp/pull-secret.json
-              oc apply --kubeconfig=$DEST_KUBECONFIG -f /tmp/pull-secret.json
-              oc link --kubeconfig=$DEST_KUBECONFIG secret --for=pull deployer test-component-image-pull
+              oc --kubeconfig=$DEST_KUBECONFIG apply -f /tmp/pull-secret.json
+              oc --kubeconfig=$DEST_KUBECONFIG secret link --for=pull deployer test-component-image-pull
 
           - name: deploy-app
             image: quay.io/konflux-ci/konflux-test:latest
