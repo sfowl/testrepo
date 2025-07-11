@@ -110,6 +110,6 @@ spec:
 
               oc create deployment test-component --image=$IMAGE
               oc get deployment test-component -o yaml
-              oc wait --for=condition=Running deployment/test-component --timeout=120s
+              oc wait --for=condition=Running deployment/test-component --timeout=120s || oc get pods -o yaml
               # LOGS=$(kubectl logs deployment/test-component
               oc get pods -o yaml
