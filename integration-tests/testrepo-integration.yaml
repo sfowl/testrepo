@@ -88,7 +88,8 @@ spec:
               oc get secrets test-component-image-pull -o json
               oc get secrets test-component-image-pull -o json | jq 'del(.metadata.creationTimestamp,
                 .metadata.uid, .metadata.resourceVersion,
-                .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration")' \
+                .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration",
+                .metadata.namespace)' \
               | oc apply --kubeconfig=$DEST_KUBECONFIG -f -
 
           - name: deploy-app
