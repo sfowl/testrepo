@@ -89,8 +89,9 @@ spec:
               oc get secrets test-component-image-pull -o json | jq 'del(.metadata.creationTimestamp,
                 .metadata.uid, .metadata.resourceVersion,
                 .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration",
-                .metadata.namespace)' \
-              | oc apply --kubeconfig=$DEST_KUBECONFIG -f -
+                .metadata.namespace)' > /tmp/pull-secret.json
+              cat /tmp/pull-secret.json
+              cat /tmp/pull-secret.json | oc apply --kubeconfig=$DEST_KUBECONFIG -f -
 
           - name: deploy-app
             image: quay.io/konflux-ci/konflux-test:latest
