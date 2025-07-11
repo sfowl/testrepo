@@ -37,6 +37,8 @@ spec:
       params:
         - name: SNAPSHOT
           value: "$(params.SNAPSHOT)"
+      runAfter:
+      - provision-env
       taskSpec:
         params:
           - name: SNAPSHOT
