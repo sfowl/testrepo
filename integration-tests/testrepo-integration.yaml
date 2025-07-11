@@ -112,3 +112,4 @@ spec:
               oc get deployment test-component -o yaml
               oc wait --for=condition=Running deployment/test-component --timeout=120s
               # LOGS=$(kubectl logs deployment/test-component
+              oc get pods -o yaml
