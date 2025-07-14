@@ -94,7 +94,7 @@ spec:
               oc --kubeconfig=$DEST_KUBECONFIG secret link --for=pull default $PULL_SECRET
 
           # deploy an instance of our app using the snapshot image in our test env
-          - name: rapidast-check
+          - name: deploy-app
             image: quay.io/konflux-ci/konflux-test:latest
             env:
               - name: SNAPSHOT
@@ -115,7 +115,38 @@ spec:
               oc wait --for=condition=Available=true deployment/test-component --timeout=120s
               oc expose deployment test-component --port 8080
 
-          - name: deploy-app
+    - name: rapidast-check
+      runAfter:
+      - deploy-app
+      taskSpec:
+        volumes:
+          - name: credentials
+            emptyDir: {}
+        steps:
+          # we need to repeat this to get our kubeconfig because we store it
+          # an emptyDir volume, which only exists for the lifetime of a single taskRun
+          - name: get-kubeconfig
+            image: quay.io/konflux-ci/konflux-test:latest
+            env:
+              - name: KUBECONFIG
+                value: /credentials/kubeconfig.yml
+              - name: KUBECONFIG_VALUE
+                valueFrom:
+                  secretKeyRef:
+                    name: "$(tasks.provision-env.results.secretRef)"
+                    key: kubeconfig
+            volumeMounts:
+              - name: credentials
+                mountPath: /credentials
+            script: |
+              #!/bin/bash
+              set -euxo pipefail
+
+              cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
+              echo "Wrote kubeconfig for new environment to $KUBECONFIG"
+
+          # run rapidast by deploying it as a pod in our new test env
+          - name: rapidast-check
             image: quay.io/konflux-ci/konflux-test:latest
             env:
               - name: KUBECONFIG
@@ -129,7 +160,7 @@ spec:
 
               TARGET_HOST="test-component:8080" # svc created via earlier `oc expose step`
 
-              cat <<<EOF > /tmp/rapidast-config.yml
+              cat <<EOF > /tmp/rapidast-config.yml
                 config:
                   configVersion: 6
 
@@ -151,4 +182,3 @@ spec:
               oc logs -f rapidast-check -c rapidast
               oc wait --for=condition=Completed pod rapidast-check --timeout=10s
               oc logs rapidast-check -c results
-
