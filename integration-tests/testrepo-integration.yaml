@@ -180,5 +180,6 @@ spec:
               oc apply -f https://raw.githubusercontent.com/sfowl/rapidast/refs/heads/k8s-example/examples/kubernetes/rapidast-pod.yaml
 
               trap 'oc get pod -o yaml rapidast-check && oc logs rapidast-check -c rapidast' EXIT
+              oc wait --for=condition=Initialized rapidast-check --timeout=120s
               oc logs -f rapidast-check -c rapidast
               oc logs rapidast-check -c results
