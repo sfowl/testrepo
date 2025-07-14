@@ -175,13 +175,10 @@ spec:
                         apiUrl: "http://${TARGET_HOST}/api/v1/swagger.json"
               EOF
 
-              oc create configmap rapidast-config --from-file=config.yml=/tmp/rapidast-config.yml
+              oc create configmap rapidast-config --from-file=config.yaml=/tmp/rapidast-config.yml
               # TODO change URL
               oc apply -f https://raw.githubusercontent.com/sfowl/rapidast/refs/heads/k8s-example/examples/kubernetes/rapidast-pod.yaml
 
               trap 'oc get pod -o yaml rapidast-check && oc logs rapidast-check -c rapidast' EXIT
-              oc wait --for=condition=Running=true pod rapidast-check --timeout=120s
               oc logs -f rapidast-check -c rapidast
-              oc wait --for=condition=Completed pod rapidast-check --timeout=10s
-
               oc logs rapidast-check -c results
