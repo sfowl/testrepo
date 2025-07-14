@@ -113,7 +113,7 @@ spec:
 
               oc create deployment test-component --image=$IMAGE
               oc wait --for=condition=Available=true deployment/test-component --timeout=120s
-              # LOGS=$(kubectl logs deployment/test-component
+              oc expose deployment test-component --port 8080
 
           - name: deploy-app
             image: quay.io/konflux-ci/konflux-test:latest
@@ -127,21 +127,21 @@ spec:
               #!/bin/bash
               set -euxo pipefail
 
-              IP_ADDRESS=$(oc get pod -l app=tchat -o jsonpath='{.items[0].status.podIP}')
+              TARGET_HOST="test-component:8080" # svc created via earlier `oc expose step`
 
-              cat <<EOF > /tmp/rapidast-config.yml
+              cat <<<EOF > /tmp/rapidast-config.yml
                 config:
                   configVersion: 6
 
                 application:
                   shortName: "simple-server"
-                  url: "http://{IP_ADDRESS}example.com" # root URL of the application
+                  url: "http://${TARGET_HOST}" # root URL of the application
 
                 scanners:
                   zap:
                     apiScan:
                       apis:
-                        apiUrl: "http://{IP_ADDRESS}/api/v1/swagger.json"
+                        apiUrl: "http://${TARGET_HOST}/api/v1/swagger.json"
               EOF
 
               oc create configmap rapidast-config --from-file=/tmp/rapidast-config.yml
