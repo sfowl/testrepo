@@ -177,7 +177,7 @@ spec:
 
               oc create configmap rapidast-config --from-file=/tmp/rapidast-config.yml
               # TODO change URL
-              oc apply -f https://github.com/sfowl/rapidast/blob/k8s-example/examples/kubernetes/rapidast-pod.yaml
+              oc apply -f https://raw.githubusercontent.com/sfowl/rapidast/refs/heads/k8s-example/examples/kubernetes/rapidast-pod.yaml
               oc wait --for=condition=Running=true pod rapidast-check --timeout=120s
               oc logs -f rapidast-check -c rapidast
               oc wait --for=condition=Completed pod rapidast-check --timeout=10s
