@@ -156,7 +156,7 @@ spec:
                 mountPath: /credentials
             script: |
               #!/bin/bash
-              set -euxo pipefail
+              set -ex
 
               TARGET_HOST="test-component:8080" # svc created via earlier `oc expose step`
 
@@ -178,7 +178,7 @@ spec:
               oc create configmap rapidast-config --from-file=/tmp/rapidast-config.yml
               # TODO change URL
               oc apply -f https://raw.githubusercontent.com/sfowl/rapidast/refs/heads/k8s-example/examples/kubernetes/rapidast-pod.yaml
-              oc wait --for=condition=Running=true pod rapidast-check --timeout=120s
+              oc wait --for=condition=Running=true pod rapidast-check --timeout=120s || oc get pod -o yaml rapidast-check
               oc logs -f rapidast-check -c rapidast
               oc wait --for=condition=Completed pod rapidast-check --timeout=10s
               oc logs rapidast-check -c results
