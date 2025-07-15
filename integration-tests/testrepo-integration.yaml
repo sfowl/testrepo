@@ -113,73 +113,39 @@ spec:
 
               oc create deployment test-component --image=$IMAGE
               oc wait --for=condition=Available=true deployment/test-component --timeout=120s
-              oc expose deployment test-component --port 8080
+              oc expose deployment test-component --port 8888
 
     - name: rapidast-check
       runAfter:
       - deploy-app
-      taskSpec:
-        volumes:
-          - name: credentials
-            emptyDir: {}
-        steps:
-          # we need to repeat this to get our kubeconfig because we store it
-          # an emptyDir volume, which only exists for the lifetime of a single taskRun
-          - name: get-kubeconfig
-            image: quay.io/konflux-ci/konflux-test:latest
-            env:
-              - name: KUBECONFIG
-                value: /credentials/kubeconfig.yml
-              - name: KUBECONFIG_VALUE
-                valueFrom:
-                  secretKeyRef:
-                    name: "$(tasks.provision-env.results.secretRef)"
-                    key: kubeconfig
-            volumeMounts:
-              - name: credentials
-                mountPath: /credentials
-            script: |
-              #!/bin/bash
-              set -euxo pipefail
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            # TODO change url + revision
+            value: https://github.com/sfowl/testrepo
+          - name: revision
+            value: setup
+          - name: pathInRepo
+            value: integration-tests/rapidast-check.yaml
+      params:
+        - name: KUBECONFIG_VALUE
+          valueFrom:
+            secretKeyRef:
+              name: "$(tasks.provision-env.results.secretRef)"
+              key: kubeconfig
+        - name: RAPIDAST_CONFIG_VALUE
+          value: |
+            config:
+              configVersion: 6
 
-              cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
-              echo "Wrote kubeconfig for new environment to $KUBECONFIG"
+            application:
+              shortName: "simple-server"
+              url: "http://test-component:8888" # root URL of the application
 
-          # run rapidast by deploying it as a pod in our new test env
-          - name: rapidast-check
-            image: quay.io/konflux-ci/konflux-test:latest
-            env:
-              - name: KUBECONFIG
-                value: /credentials/kubeconfig.yml
-            volumeMounts:
-              - name: credentials
-                mountPath: /credentials
-            script: |
-              #!/bin/bash
-              set -ex
-
-              TARGET_HOST="test-component:8080" # svc created via earlier `oc expose step`
-
-              cat <<EOF > /tmp/rapidast-config.yml
-                config:
-                  configVersion: 6
-
-                application:
-                  shortName: "simple-server"
-                  url: "http://${TARGET_HOST}" # root URL of the application
-
-                scanners:
-                  zap:
-                    apiScan:
-                      apis:
-                        apiUrl: "http://${TARGET_HOST}/api/v1/swagger.json"
-              EOF
-
-              oc create configmap rapidast-config --from-file=config.yaml=/tmp/rapidast-config.yml
-              # TODO change URL
-              oc apply -f https://raw.githubusercontent.com/sfowl/rapidast/refs/heads/k8s-example/examples/kubernetes/rapidast-pod.yaml
-
-              trap 'oc get pod -o yaml rapidast-check && oc logs rapidast-check -c rapidast' EXIT
-              oc wait --for=condition=Initialized rapidast-check --timeout=120s
-              oc logs -f rapidast-check -c rapidast
-              oc logs rapidast-check -c results
+            scanners:
+              zap:
+                apiScan:
+                  apis:
+                    apiUrl: "http://test-component:8888/api/v1/swagger.json"
+            

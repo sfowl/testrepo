@@ -1,0 +1,94 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/tags: "konflux"
+  name: rapidast-check
+spec:
+  description: >-
+    This task is for use in an IntegrationTest, to use RapiDAST to scan a running application.
+  results:
+    - description: Tekton task test output.
+      name: TEST_OUTPUT
+  params:
+    - name: KUBECONFIG_VALUE
+      description: The contents of a kubeconfig file used to accessing the test environment.
+      type: string
+    - name: RAPIDAST_CONFIG_VALUE
+      description: The contents of a rapidast config file. Target URLs for scanning should point to localhost and match PORT_FORWARD_TARGETS.
+      type: string
+    - name: PORT_FORWARD_TARGETS
+      description: Scan targets in test environment and arguments for `oc port-forward` commands.
+      type: array
+      default:
+        - pod/my-pod 8888:5000
+  volumes:
+    - name: credentials
+      emptyDir: {}
+  steps:
+    # setup auth to test env
+    - name: get-kubeconfig
+      image: quay.io/konflux-ci/konflux-test:latest
+      volumeMounts:
+        - name: credentials
+          mountPath: /credentials
+      env:
+        - name: KUBECONFIG
+          value: /credentials/kubeconfig.yml
+        - name: KUBECONFIG_VALUE
+          value: $(params.KUBECONFIG_VALUE)
+      script: |
+        #!/bin/bash
+        set -euxo pipefail
+
+        cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
+        echo "Wrote kubeconfig for new environment to $KUBECONFIG"
+
+    # perform rapidast scan
+    - name: rapidast-check
+      image: quay.io/konflux-ci/konflux-test:latest
+      env:
+        - name: KUBECONFIG
+          value: /credentials/kubeconfig.yml
+      volumeMounts:
+        - name: credentials
+          mountPath: /credentials
+      script: |
+        #!/bin/bash
+        set -ex
+
+        TARGET_HOST="test-component:8080" # service created via earlier `oc expose` step
+
+        cat <<EOF > /tmp/rapidast-config.yml
+          config:
+            configVersion: 6
+
+          application:
+            shortName: "simple-server"
+            url: "http://${TARGET_HOST}" # root URL of the application
+
+          scanners:
+            zap:
+              apiScan:
+                apis:
+                  apiUrl: "http://${TARGET_HOST}/api/v1/swagger.json"
+        EOF
+
+        cat <<< "$RAPIDAST_CONFIG_VALUE" > config.yaml
+
+        oc create configmap rapidast-config --from-file=config.yaml=/tmp/rapidast-config.yml
+        # TODO change URL
+        oc apply -f https://raw.githubusercontent.com/sfowl/rapidast/refs/heads/k8s-example/examples/kubernetes/rapidast-pod.yaml
+
+        # for debugging
+        trap 'oc get pod -o yaml rapidast-check && oc logs rapidast-check -c rapidast' EXIT
+
+        # TODO find something better
+        sleep 30
+        
+        oc logs -f rapidast-check -c rapidast
+        oc logs rapidast-check -c results
+        # TODO process results
