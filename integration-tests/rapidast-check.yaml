@@ -93,5 +93,7 @@ spec:
         sleep 30
         
         oc logs -f rapidast-check -c rapidast
-        oc logs rapidast-check -c results
+        oc wait --for=condition=Completed pod/rapidast-check --timeout=120s
+        oc logs rapidast-check -c results | tee > /tmp/rapidast-scan-results.sarif
+        TEST_OUTPUT=$(cat /tmp/rapidast-scan-results.sarif)
         # TODO process results
