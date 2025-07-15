@@ -14,8 +14,8 @@ spec:
     - description: Tekton task test output.
       name: TEST_OUTPUT
   params:
-    - name: KUBECONFIG_VALUE
-      description: The contents of a kubeconfig file used to accessing the test environment.
+    - name: KUBECONFIG_SECRET
+      description: The name of a kubeconfig used to to access the test environment.
       type: string
     - name: RAPIDAST_CONFIG_VALUE
       description: The contents of a rapidast config file. Target URLs for scanning should point to localhost and match PORT_FORWARD_TARGETS.
@@ -39,7 +39,10 @@ spec:
         - name: KUBECONFIG
           value: /credentials/kubeconfig.yml
         - name: KUBECONFIG_VALUE
-          value: $(params.KUBECONFIG_VALUE)
+          valueFrom:
+            secretKeyRef:
+              name: "$(params.KUBECONFIG_SECRET)"
+              key: kubeconfig
       script: |
         #!/bin/bash
         set -euxo pipefail

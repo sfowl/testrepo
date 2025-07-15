@@ -129,11 +129,8 @@ spec:
           - name: pathInRepo
             value: integration-tests/rapidast-check.yaml
       params:
-        - name: KUBECONFIG_VALUE
-          valueFrom:
-            secretKeyRef:
-              name: "$(tasks.provision-env.results.secretRef)"
-              key: kubeconfig
+        - name: KUBECONFIG_SECRET
+          value: "$(tasks.provision-env.results.secretRef)"
         - name: RAPIDAST_CONFIG_VALUE
           value: |
             config:
