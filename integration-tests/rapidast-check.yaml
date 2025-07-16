@@ -63,7 +63,7 @@ spec:
         #!/bin/bash
         set -ex
 
-        cat <<< "$RAPIDAST_CONFIG_VALUE" > /tmp/rapidast-config.yaml
+        cat <<< "$(params.RAPIDAST_CONFIG_VALUE)" > /tmp/rapidast-config.yaml
 
         oc create configmap rapidast-config --from-file=config.yaml=/tmp/rapidast-config.yaml
         # TODO change URL
