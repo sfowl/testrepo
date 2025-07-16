@@ -63,24 +63,7 @@ spec:
         #!/bin/bash
         set -ex
 
-        TARGET_HOST="test-component:8080" # service created via earlier `oc expose` step
-
-        cat <<EOF > /tmp/rapidast-config.yml
-          config:
-            configVersion: 6
-
-          application:
-            shortName: "simple-server"
-            url: "http://${TARGET_HOST}" # root URL of the application
-
-          scanners:
-            zap:
-              apiScan:
-                apis:
-                  apiUrl: "http://${TARGET_HOST}/api/v1/swagger.json"
-        EOF
-
-        cat <<< "$RAPIDAST_CONFIG_VALUE" > config.yaml
+        cat <<< "$RAPIDAST_CONFIG_VALUE" > /tmp/rapidast-config.yaml
 
         oc create configmap rapidast-config --from-file=config.yaml=/tmp/rapidast-config.yml
         # TODO change URL
@@ -94,7 +77,7 @@ spec:
         
         oc logs -f rapidast-check -c rapidast
         oc wait --for=jsonpath='{.status.phase}'='Succeeded' pod/rapidast-check --timeout=120s
-        oc logs rapidast-check -c results | tee > /tmp/rapidast-scan-results.sarif
+        oc logs rapidast-check -c results | tee /tmp/rapidast-scan-results.sarif
 
         # helper code from konflux-test image, includes: parse_test_output
         source utils.sh
