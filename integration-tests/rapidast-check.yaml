@@ -99,6 +99,6 @@ spec:
         # helper code from konflux-test image, includes: parse_test_output
         source utils.sh
         TEST_OUTPUT=
-        parse_test_output $(context.task.name) sarif /tmp/rapidast-scan-results.sarif)
+        parse_test_output $(context.task.name) sarif /tmp/rapidast-scan-results.sarif
         echo "${TEST_OUTPUT:-${ERROR_OUTPUT}}" | tee "$(results.TEST_OUTPUT.path)"
         # TODO process results
