@@ -65,7 +65,7 @@ spec:
 
         cat <<< "$RAPIDAST_CONFIG_VALUE" > /tmp/rapidast-config.yaml
 
-        oc create configmap rapidast-config --from-file=config.yaml=/tmp/rapidast-config.yml
+        oc create configmap rapidast-config --from-file=config.yaml=/tmp/rapidast-config.yaml
         # TODO change URL
         oc apply -f https://raw.githubusercontent.com/sfowl/rapidast/refs/heads/k8s-example/examples/kubernetes/rapidast-pod.yaml
 
