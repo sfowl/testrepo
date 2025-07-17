@@ -113,7 +113,7 @@ spec:
 
               oc create deployment test-component --image=$IMAGE
               oc wait --for=condition=Available=true deployment/test-component --timeout=120s
-              oc expose deployment test-component --port 8888
+              oc expose deployment test-component --port 5000
 
     - name: rapidast-check
       runAfter:
@@ -137,12 +137,12 @@ spec:
               configVersion: 6
 
             application:
-              shortName: "simple-server"
-              url: "http://test-component:8888" # root URL of the application
+              shortName: "test-component-1.0"
+              url: "http://test-component:5000" # root URL of the application
 
             scanners:
               zap:
-                apiScan:
-                  apis:
-                    apiUrl: "http://test-component:8888/api/v1/swagger.json"
-            
+                spider: {}
+                passiveScan: {}
+                activeScan:
+                  policy: API-scan-minimal
