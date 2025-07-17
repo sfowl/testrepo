@@ -138,7 +138,7 @@ spec:
               results:
                 exclusions:
                   rules:
-                    - name: "Exclude findings below a severity level of Important (based on sarif levels)"
+                    - name: "Exclude findings below a severity level of Important"
                       cel_expression: ".result.level != \"error\" && .result.level != \"warning\""
 
             application:
