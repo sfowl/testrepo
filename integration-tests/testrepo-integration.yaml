@@ -135,6 +135,12 @@ spec:
           value: |
             config:
               configVersion: 6
+                results:
+                  exclusions:
+                    enabled: True
+                    rules:
+                      - name: "Exclude findings below a severity level of Important"
+                        cel_expression: '.result.level != "error" && .result.level != "warning"' # In sarif, error == critical, warning == important``
 
             application:
               shortName: "test-component-1.0"
