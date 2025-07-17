@@ -68,7 +68,7 @@ spec:
         source /utils.sh
         trap 'handle_error $(results.TEST_OUTPUT.path)' EXIT
 
-        echo "$(params.RAPIDAST_CONFIG_VALUE)" > /tmp/rapidast-config.yaml
+        printf %s "$(params.RAPIDAST_CONFIG_VALUE)" > /tmp/rapidast-config.yaml
 
         oc create configmap rapidast-config --from-file=config.yaml=/tmp/rapidast-config.yaml
         # TODO change URL
