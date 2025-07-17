@@ -107,8 +107,7 @@ spec:
                   high: ([.runs[0].results[]? | select(.level == "warning")] | length // 0),
                   medium: ([.runs[0].results[]? | select(.level == "note")] | length // 0),
                   low: ([.runs[0].results[]? | select(.level == "none")] | length // 0),
-                  unknown: ([.runs[0].results[]? | select(.level == "unknown")] | length // 0),
-                  unknown: 0
+                  unknown: ([.runs[0].results[]? | select(.level == "unknown")] | length // 0)
                 }
             }' "$sarif_file")
 

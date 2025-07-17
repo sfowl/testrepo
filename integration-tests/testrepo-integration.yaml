@@ -137,7 +137,6 @@ spec:
               configVersion: 6
               results:
                 exclusions:
-                  enabled: True
                   rules:
                     - name: "Exclude findings below a severity level of Important (based on sarif levels)"
                       cel_expression: '.result.level != "error" && .result.level != "warning"'
