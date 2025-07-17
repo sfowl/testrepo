@@ -11,8 +11,10 @@ spec:
   description: >-
     This task is for use in an IntegrationTest, to use RapiDAST to scan a running application.
   results:
-    - description: Tekton task test output.
-      name: TEST_OUTPUT
+    - name: TEST_OUTPUT
+      description: Tekton task test output.
+    - name: SCAN_OUTPUT
+      description: RapiDAST scan result.
   params:
     - name: KUBECONFIG_SECRET
       description: The name of a kubeconfig used to to access the test environment.
@@ -62,6 +64,9 @@ spec:
       script: |
         #!/bin/bash
         set -ex
+        # helper code from konflux-test image, includes handle_error and make_result_json
+        source /utils.sh
+        trap 'handle_error $(results.TEST_OUTPUT.path)' EXIT
 
         cat <<< "$(params.RAPIDAST_CONFIG_VALUE)" > /tmp/rapidast-config.yaml
 
@@ -70,7 +75,7 @@ spec:
         oc apply -f https://raw.githubusercontent.com/sfowl/rapidast/refs/heads/k8s-example/examples/kubernetes/rapidast-pod.yaml
 
         # for debugging
-        trap 'oc get pod -o yaml rapidast-check && oc logs rapidast-check -c rapidast' EXIT
+        trap 'oc get pod -o yaml rapidast-check && oc logs rapidast-check -c rapidast' ERR
 
         # TODO find something better
         sleep 30
@@ -79,9 +84,44 @@ spec:
         oc wait --for=jsonpath='{.status.phase}'='Succeeded' pod/rapidast-check --timeout=120s
         oc logs rapidast-check -c results | tee /tmp/rapidast-scan-results.sarif
 
-        # helper code from konflux-test image, includes: parse_test_output
-        source utils.sh
-        TEST_OUTPUT=
-        parse_test_output $(context.task.name) sarif /tmp/rapidast-scan-results.sarif
-        echo "${TEST_OUTPUT:-${ERROR_OUTPUT}}" | tee "$(results.TEST_OUTPUT.path)"
-        # TODO process results
+        # TODO put result handling in separate step
+
+        # Process SCAN_OUTPUT similar to clair scan, but don't use optional 'unpatched_vulnerabilities' field
+        scan_result='{"vulnerabilities":{"critical":0, "high":0, "medium":0, "low":0, "unknown":0}}'
+
+        sarif_file="/tmp/rapidast-scan-results.sarif"
+
+        if [ ! -s "$sarif_file" ]; then
+          echo "No RapiDAST SARIF file found or it's empty."
+          note="Task $(context.task.name) failed: No RapiDAST SARIF file found or it's empty. For details, check Tekton task log."
+          TEST_OUTPUT=$(make_result_json -r "ERROR" -t "$note")
+          echo "${TEST_OUTPUT}" | tee "$(results.TEST_OUTPUT.path)"
+          exit 0
+        fi
+
+        # SARIF level mapping: 'error' -> critical, 'warning' -> high, 'note' -> medium.
+        result=$(jq -rce \
+            '{
+                vulnerabilities:{
+                  critical: ([.runs[0].results[]? | select(.level == "error")] | length // 0),
+                  high: ([.runs[0].results[]? | select(.level == "warning")] | length // 0),
+                  medium: ([.runs[0].results[]? | select(.level == "note")] | length // 0),
+                  low: ([.runs[0].results[]? | select(.level == "none")] | length // 0),
+                  unknown: ([.runs[0].results[]? | select(.level == "unknown")] | length // 0),
+                  unknown: 0
+                }
+            }' "$sarif_file")
+
+        scan_result=$(jq -s -rce \
+              '.[0].vulnerabilities.critical += .[1].vulnerabilities.critical |
+              .[0].vulnerabilities.high += .[1].vulnerabilities.high |
+              .[0].vulnerabilities.medium += .[1].vulnerabilities.medium |
+              .[0].vulnerabilities.low += .[1].vulnerabilities.low |
+              .[0].vulnerabilities.unknown += .[1].vulnerabilities.unknown |
+              .[0]' <<<"$scan_result $result")
+
+        echo "$scan_result" | tee "$(results.SCAN_OUTPUT.path)"
+
+        note="Task $(context.task.name) completed: Refer to Tekton task result SCAN_OUTPUT for vulnerabilities scanned by RapiDAST."
+        TEST_OUTPUT=$(make_result_json -r "SUCCESS" -t "$note")
+        echo "${TEST_OUTPUT}" | tee "$(results.TEST_OUTPUT.path)"
