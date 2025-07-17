@@ -139,7 +139,7 @@ spec:
                 exclusions:
                   rules:
                     - name: "Exclude findings below a severity level of Important"
-                      cel_expression: ".result.level != \"error\" && .result.level != \"warning\""
+                      cel_expression: ".result.level != 'error' && .result.level != 'warning'"
 
             application:
               shortName: "test-component-1.0"
