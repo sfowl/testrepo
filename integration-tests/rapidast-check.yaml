@@ -91,7 +91,7 @@ spec:
         # TODO put result handling in separate step
 
         # Process SCAN_OUTPUT similar to clair scan, but don't use optional 'unpatched_vulnerabilities' field
-        scan_result='{"vulnerabilities":{"critical":0, "high":0, "medium":0, "low":0, "unknown":0}}'
+        scan_result='{"vulnerabilities":{"critical":0, "high":0, "medium":0, "low":0, "unknown":0}, "unpatched_vulnerabilities":{"critical":0, "high":0, "medium":0, "low":0, "unknown":0}}'
 
         sarif_file="/tmp/rapidast-scan-results.sarif"
 
@@ -106,7 +106,7 @@ spec:
         # SARIF level mapping: 'error' -> critical, 'warning' -> high, 'note' -> medium.
         result=$(jq -rce \
             '{
-                vulnerabilities:{
+                unpatched_vulnerabilities:{
                   critical: ([.runs[0].results[]? | select(.level == "error")] | length // 0),
                   high: ([.runs[0].results[]? | select(.level == "warning")] | length // 0),
                   medium: ([.runs[0].results[]? | select(.level == "note")] | length // 0),
@@ -116,11 +116,11 @@ spec:
             }' "$sarif_file")
 
         scan_result=$(jq -s -rce \
-              '.[0].vulnerabilities.critical += .[1].vulnerabilities.critical |
-              .[0].vulnerabilities.high += .[1].vulnerabilities.high |
-              .[0].vulnerabilities.medium += .[1].vulnerabilities.medium |
-              .[0].vulnerabilities.low += .[1].vulnerabilities.low |
-              .[0].vulnerabilities.unknown += .[1].vulnerabilities.unknown |
+              '.[0].unpatched_vulnerabilities.critical += .[1].unpatched_vulnerabilities.critical |
+              .[0].unpatched_vulnerabilities.high += .[1].unpatched_vulnerabilities.high |
+              .[0].unpatched_vulnerabilities.medium += .[1].unpatched_vulnerabilities.medium |
+              .[0].unpatched_vulnerabilities.low += .[1].unpatched_vulnerabilities.low |
+              .[0].unpatched_vulnerabilities.unknown += .[1].unpatched_vulnerabilities.unknown |
               .[0]' <<<"$scan_result $result")
 
         echo "$scan_result" | tee "$(results.SCAN_OUTPUT.path)"
