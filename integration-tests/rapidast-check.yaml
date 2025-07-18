@@ -9,7 +9,7 @@ metadata:
   name: rapidast-check
 spec:
   description: >-
-    This task is for use in an IntegrationTest, to use RapiDAST to scan a running application.
+    This task uses RapiDAST to scan a running application. Intended for use in an Integration Test, not a build pipeline.
   results:
     - name: TEST_OUTPUT
       description: Tekton task test output.
