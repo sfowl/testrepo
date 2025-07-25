@@ -66,7 +66,7 @@ spec:
         # split on ",", then parse as json to handle whitespace
         IFS="," read -ra TARGETS_ARRAY <<< "${PORT_FORWARD_TARGETS}"
 
-        for t in $(echo "${TARGETS_ARRAY}" | jq -r '.[]'); do
+        for t in "${TARGETS_ARRAY[@]}"; do
           oc port-forward ${t} &
           PID=$!
           timeout 30s check_pid_listening_port ${PID} || {
