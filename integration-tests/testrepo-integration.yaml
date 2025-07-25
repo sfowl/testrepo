@@ -144,7 +144,7 @@ spec:
 
             application:
               shortName: "test-component-1.0"
-              url: "http://localhost:5000" # root URL of the application
+              url: "http://127.0.0.1:5000" # root URL of the application
 
             scanners:
               zap:
