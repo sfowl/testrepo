@@ -32,7 +32,7 @@ spec:
       emptyDir: {}
   sidecars:
     - name: port-forward
-      image: registry.redhat.io/openshift4/ose-cli:latest
+      image: quay.io/konflux-ci/konflux-test:latest
       volumeMounts:
         - name: shared
           mountPath: /shared
@@ -45,7 +45,7 @@ spec:
               name: "$(params.KUBECONFIG_SECRET)"
               key: kubeconfig
         - name: PORT_FORWARD_TARGETS
-          value: "$(params.PORT_FORWARD_TARGETS[*])"
+          value: "$(params.PORT_FORWARD_TARGETS)"
       script: |
         #!/usr/bin/env bash
         set -ex
