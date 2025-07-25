@@ -44,6 +44,8 @@ spec:
             secretKeyRef:
               name: "$(params.KUBECONFIG_SECRET)"
               key: kubeconfig
+        - env: PORT_FORWARD_TARGETS
+          value: "$(params.PORT_FORWARD_TARGETS[*])"
       script: |
         #!/usr/bin/env bash
         set -ex
@@ -51,7 +53,7 @@ spec:
         cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
         echo "Wrote kubeconfig for new environment to $KUBECONFIG"
 
-        echo $(params.PORT_FORWARD_TARGETS)
+        echo "${PORT_FORWARD_TARGETS}"
 
         check_pid_listening_port() {
             local pid=$1
@@ -63,7 +65,10 @@ spec:
             fi
         }
         
-        for t in $(params.PORT_FORWARD_TARGETS[*]); do
+        # parse as json to handle spaces in elements
+        TARGETS_JSON="${PORT_FORWARD_TARGETS}"
+
+        for t in $(echo "${TARGETS_JSON}" | jq -r '.[]'); do
           oc port-forward ${t} &
           PID=$!
           timeout 30s check_pid_listening_port ${PID} || {
