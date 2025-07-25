@@ -113,7 +113,6 @@ spec:
 
               oc create deployment test-component --image=$IMAGE
               oc wait --for=condition=Available=true deployment/test-component --timeout=120s
-              oc expose deployment test-component --port 5000
 
     - name: rapidast-check
       runAfter:
@@ -131,6 +130,9 @@ spec:
       params:
         - name: KUBECONFIG_SECRET
           value: "$(tasks.provision-env.results.secretRef)"
+        - name: PORT_FORWARD_TARGETS
+          value:
+            - "deployment/test-component 5000:5000"
         - name: RAPIDAST_CONFIG_VALUE
           value: |
             config:
@@ -143,7 +145,7 @@ spec:
 
             application:
               shortName: "test-component-1.0"
-              url: "http://test-component:5000" # root URL of the application
+              url: "http://localhost:5000" # root URL of the application
 
             scanners:
               zap:

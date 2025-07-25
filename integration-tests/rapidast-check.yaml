@@ -23,47 +23,60 @@ spec:
       description: The contents of a rapidast config file. Target URLs for scanning should point to localhost and match PORT_FORWARD_TARGETS.
       type: string
     - name: PORT_FORWARD_TARGETS
-      description: Scan targets in test environment and arguments for `oc port-forward` commands.
+      description: Scan targets in test environment and arguments for `oc port-forward` commands. Each host:port in RAPIDAST_CONFIG_VALUE requires a respective port-forward target.
       type: array
       default:
         - pod/my-pod 8888:5000
   volumes:
-    - name: credentials
+    - name: shared
       emptyDir: {}
-  steps:
-    # setup auth to test env
-    - name: get-kubeconfig
-      image: quay.io/konflux-ci/konflux-test:latest
+  sidecars:
+    - name: port-forward
+      image: registry.redhat.io/openshift4/ose-cli:latest
       volumeMounts:
-        - name: credentials
-          mountPath: /credentials
+        - name: shared
+          mountPath: /shared
       env:
         - name: KUBECONFIG
-          value: /credentials/kubeconfig.yml
+          value: /shared/kubeconfig.yml
         - name: KUBECONFIG_VALUE
           valueFrom:
             secretKeyRef:
               name: "$(params.KUBECONFIG_SECRET)"
               key: kubeconfig
       script: |
-        #!/bin/bash
-        set -euxo pipefail
+        #!/usr/bin/env bash
+        set -ex
 
         cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
         echo "Wrote kubeconfig for new environment to $KUBECONFIG"
+        
+        for $t in $(params.PORT_FORWARD_TARGETS[*]); do
+          oc port-forward $t &
+        done
 
+        touch /shared/port-forward-ready
+        sleep infinity
+
+  steps:
     # perform rapidast scan
     - name: rapidast-check
       image: quay.io/konflux-ci/konflux-test:latest
       env:
         - name: KUBECONFIG
-          value: /credentials/kubeconfig.yml
+          value: /shared/kubeconfig.yml
       volumeMounts:
-        - name: credentials
-          mountPath: /credentials
+        - name: shared
+          mountPath: /shared
       script: |
         #!/bin/bash
         set -ex
+
+        timeout 5m bash -c 'until [ -f /shared/port-forward-ready ]; do sleep 2; done' || {
+          echo "[ERROR] oc port-forward commands in sidecar were not ready in time. Exiting"
+          exit 1
+        }
+
         # helper code from konflux-test image, includes handle_error and make_result_json
         source /utils.sh
         trap 'handle_error $(results.TEST_OUTPUT.path)' EXIT
