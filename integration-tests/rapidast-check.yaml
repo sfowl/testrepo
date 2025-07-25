@@ -72,7 +72,7 @@ spec:
         IFS="," read -ra TARGETS_ARRAY <<< "${PORT_FORWARD_TARGETS}"
 
         for t in "${TARGETS_ARRAY[@]}"; do
-          oc port-forward ${t} &
+          oc port-forward --address 0.0.0.0 ${t} &
           PID=$!
           timeout 30s bash -c "set -x; until check_pid_listening_port ${PID}; do sleep 2s; done" || {
             echo "oc port-foward failed to open local port"
