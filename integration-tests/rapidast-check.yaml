@@ -53,7 +53,6 @@ spec:
 
         echo "${PORT_FORWARD_TARGETS}"
 
-        export -f check_pid_listening_port
         check_pid_listening_port() {
             local pid=$1
             # checks that PID has at least one local port open
@@ -63,6 +62,7 @@ spec:
                 return 1 # PID does not have a listening port
             fi
         }
+        export -f check_pid_listening_port
         
         # split on ",", then parse as json to handle whitespace
         IFS="," read -ra TARGETS_ARRAY <<< "${PORT_FORWARD_TARGETS}"
