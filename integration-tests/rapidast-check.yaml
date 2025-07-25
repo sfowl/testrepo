@@ -51,6 +51,8 @@ spec:
         cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
         echo "Wrote kubeconfig for new environment to $KUBECONFIG"
 
+        echo $(params.PORT_FORWARD_TARGETS)
+
         check_pid_listening_port() {
             local pid=$1
             # checks that PID has at least one local port open
