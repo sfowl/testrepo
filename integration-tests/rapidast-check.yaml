@@ -24,9 +24,7 @@ spec:
       type: string
     - name: PORT_FORWARD_TARGETS
       description: Scan targets in test environment and arguments for `oc port-forward` commands. Each host:port in RAPIDAST_CONFIG_VALUE requires a respective port-forward target.
-      type: array
-      default:
-        - pod/my-pod 8888:5000
+      default: pod/my-pod 8888:5000
   volumes:
     - name: shared
       emptyDir: {}
@@ -65,10 +63,10 @@ spec:
             fi
         }
         
-        # parse as json to handle spaces in elements
-        TARGETS_JSON="${PORT_FORWARD_TARGETS}"
+        # split on ",", then parse as json to handle whitespace
+        IFS="," read -ra TARGETS_ARRAY <<< "${PORT_FORWARD_TARGETS}"
 
-        for t in $(echo "${TARGETS_JSON}" | jq -r '.[]'); do
+        for t in $(echo "${TARGETS_ARRAY}" | jq -r '.[]'); do
           oc port-forward ${t} &
           PID=$!
           timeout 30s check_pid_listening_port ${PID} || {

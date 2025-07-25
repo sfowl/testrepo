@@ -131,8 +131,7 @@ spec:
         - name: KUBECONFIG_SECRET
           value: "$(tasks.provision-env.results.secretRef)"
         - name: PORT_FORWARD_TARGETS
-          value:
-            - "deployment/test-component 5000:5000"
+          value: "deployment/test-component 5000:5000"
         - name: RAPIDAST_CONFIG_VALUE
           value: |
             config:
