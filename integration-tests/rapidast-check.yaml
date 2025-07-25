@@ -56,7 +56,8 @@ spec:
         check_pid_listening_port() {
             local pid=$1
             # checks that PID has at least one local port open
-            if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN >/dev/null 2>&1; then
+            # if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN >/dev/null 2>&1; then
+            if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN; then
                 return 0 # PID has a listening port
             fi
             return 1 # PID does not have a listening port
