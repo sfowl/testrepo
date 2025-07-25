@@ -53,6 +53,7 @@ spec:
 
         echo "${PORT_FORWARD_TARGETS}"
 
+        export -f check_pid_listening_port
         check_pid_listening_port() {
             local pid=$1
             # checks that PID has at least one local port open
@@ -69,7 +70,7 @@ spec:
         for t in "${TARGETS_ARRAY[@]}"; do
           oc port-forward ${t} &
           PID=$!
-          timeout 30s check_pid_listening_port ${PID} || {
+          timeout 30s "check_pid_listening_port ${PID}" || {
             echo "oc port-foward failed to open local port"
             exit 1
           }
