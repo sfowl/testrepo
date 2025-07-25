@@ -57,7 +57,9 @@ spec:
             local pid=$1
             # checks that PID has at least one local port open
             # if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN >/dev/null 2>&1; then
-            if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN; then
+            # lsof not in image, use ss instead
+            # if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN; then
+            if ss -tlnp sport = :* | grep "pid=${pid},"; then
                 return 0 # PID has a listening port
             fi
             return 1 # PID does not have a listening port
