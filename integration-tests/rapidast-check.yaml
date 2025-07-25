@@ -44,7 +44,7 @@ spec:
             secretKeyRef:
               name: "$(params.KUBECONFIG_SECRET)"
               key: kubeconfig
-        - env: PORT_FORWARD_TARGETS
+        - name: PORT_FORWARD_TARGETS
           value: "$(params.PORT_FORWARD_TARGETS[*])"
       script: |
         #!/usr/bin/env bash
