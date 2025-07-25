@@ -58,9 +58,8 @@ spec:
             # checks that PID has at least one local port open
             if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN >/dev/null 2>&1; then
                 return 0 # PID has a listening port
-            else
-                return 1 # PID does not have a listening port
             fi
+            return 1 # PID does not have a listening port
         }
         export -f check_pid_listening_port
         
@@ -70,7 +69,7 @@ spec:
         for t in "${TARGETS_ARRAY[@]}"; do
           oc port-forward ${t} &
           PID=$!
-          timeout 30s bash -c "set -x; check_pid_listening_port ${PID}" || {
+          timeout 30s bash -c "until check_pid_listening_port ${PID}; do sleep 2s; done" || {
             echo "oc port-foward failed to open local port"
             exit 1
           }
