@@ -61,7 +61,7 @@ spec:
             fi
         }
         
-        for t in "$(params.PORT_FORWARD_TARGETS[*]; do
+        for t in $(params.PORT_FORWARD_TARGETS[*]); do
           oc port-forward ${t} &
           PID=$!
           timeout 30s check_pid_listening_port ${PID} || {
