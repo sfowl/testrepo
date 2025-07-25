@@ -44,6 +44,8 @@ spec:
               key: kubeconfig
         - name: PORT_FORWARD_TARGETS
           value: "$(params.PORT_FORWARD_TARGETS)"
+      ports:
+        - containerPort: 5000
       script: |
         #!/usr/bin/env bash
         set -ex
