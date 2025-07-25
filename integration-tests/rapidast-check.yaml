@@ -59,7 +59,7 @@ spec:
             # if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN >/dev/null 2>&1; then
             # lsof not in image, use ss instead
             # if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN; then
-            if ss -tlnp sport = :* | grep "pid=${pid},"; then
+            if ss -tlnp | grep -q "pid=${pid},"; then
                 return 0 # PID has a listening port
             fi
             return 1 # PID does not have a listening port
