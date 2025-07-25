@@ -69,7 +69,7 @@ spec:
         for t in "${TARGETS_ARRAY[@]}"; do
           oc port-forward ${t} &
           PID=$!
-          timeout 30s bash -c "until check_pid_listening_port ${PID}; do sleep 2s; done" || {
+          timeout 30s bash -c "set -x; until check_pid_listening_port ${PID}; do sleep 2s; done" || {
             echo "oc port-foward failed to open local port"
             exit 1
           }
