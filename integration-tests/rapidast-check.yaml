@@ -9,7 +9,8 @@ metadata:
   name: rapidast-check
 spec:
   description: >-
-    This task uses RapiDAST to scan a running application. Intended for use in an Integration Test, not a build pipeline.
+    This task uses RapiDAST to scan a running application. Intended for use in an Integration Test, not a build pipeline. This task requires a KUBECONFIG_SECRET for an existing cluster/namespace
+    where the target application is running. To make this application reachable by RapiDAST from outside this environment, `oc port-forward` is used.
   results:
     - name: TEST_OUTPUT
       description: Tekton task test output.
@@ -86,7 +87,7 @@ spec:
   steps:
     # perform rapidast scan
     - name: rapidast-check
-      image: quay.io/konflux-ci/konflux-test:latest
+      image: quay.io/redhatproductsecurity/rapidast
       env:
         - name: KUBECONFIG
           value: /shared/kubeconfig.yml
@@ -98,7 +99,7 @@ spec:
         set -ex
 
         timeout 5m bash -c 'until [ -f /shared/port-forward-ready ]; do sleep 2; done' || {
-          echo "[ERROR] oc port-forward commands in sidecar were not ready in time. Exiting"
+          echo "[ERROR] oc port-forward commands in sidecar container not ready in time. Exiting"
           exit 1
         }
 
@@ -108,30 +109,32 @@ spec:
 
         # Use a here document to write the multiline parameter value to the file.
         # This is the most reliable method for preserving string integrity.
-        cat > /tmp/rapidast-config.yaml << EOF
+        cat > /shared/rapidast-config.yaml << EOF
         $(params.RAPIDAST_CONFIG_VALUE)
         EOF
 
-        oc create configmap rapidast-config --from-file=config.yaml=/tmp/rapidast-config.yaml
-        # TODO change URL
-        oc apply -f https://raw.githubusercontent.com/sfowl/rapidast/refs/heads/k8s-example/examples/kubernetes/rapidast-pod.yaml
+        rapidast.py --config /shared/rapidast-config.yaml
 
-        # for debugging
-        trap 'oc get pod -o yaml rapidast-check && oc logs rapidast-check -c rapidast' ERR
+        orig_sarif_file=$(find results -name rapidast-scan-results.sarif)
+        cp "${orig_sarif_file}" /shared/rapidast-scan-results.sarif
 
-        # TODO find something better
-        sleep 30
-        
-        oc logs -f rapidast-check -c rapidast
-        oc wait --for=jsonpath='{.status.phase}'='Succeeded' pod/rapidast-check --timeout=120s
-        oc logs rapidast-check -c results | tee /tmp/rapidast-scan-results.sarif
+    - name: post-process
+      image: quay.io/konflux-ci/konflux-test
+      volumeMounts:
+        - name: shared
+          mountPath: /shared
+      script: |
+        #!/bin/bash
+        set -ex
 
-        # TODO put result handling in separate step
+        # helper code from konflux-test image, includes handle_error and make_result_json
+        source /utils.sh
+        trap 'handle_error $(results.TEST_OUTPUT.path)' EXIT
+
+        sarif_file=/shared/rapidast-scan-results.sarif
 
         # Process SCAN_OUTPUT similar to clair scan, but don't use optional 'unpatched_vulnerabilities' field
-        scan_result='{"vulnerabilities":{"critical":0, "high":0, "medium":0, "low":0, "unknown":0}, "unpatched_vulnerabilities":{"critical":0, "high":0, "medium":0, "low":0, "unknown":0}}'
-
-        sarif_file="/tmp/rapidast-scan-results.sarif"
+        scan_result='{"vulnerabilities":{"critical":0, "high":0, "medium":0, "low":0, "unknown":0}}'
 
         if [ ! -s "$sarif_file" ]; then
           echo "No RapiDAST SARIF file found or it's empty."
@@ -144,7 +147,7 @@ spec:
         # SARIF level mapping: 'error' -> critical, 'warning' -> high, 'note' -> medium.
         result=$(jq -rce \
             '{
-                unpatched_vulnerabilities:{
+                vulnerabilities:{
                   critical: ([.runs[0].results[]? | select(.level == "error")] | length // 0),
                   high: ([.runs[0].results[]? | select(.level == "warning")] | length // 0),
                   medium: ([.runs[0].results[]? | select(.level == "note")] | length // 0),
@@ -154,11 +157,11 @@ spec:
             }' "$sarif_file")
 
         scan_result=$(jq -s -rce \
-              '.[0].unpatched_vulnerabilities.critical += .[1].unpatched_vulnerabilities.critical |
-              .[0].unpatched_vulnerabilities.high += .[1].unpatched_vulnerabilities.high |
-              .[0].unpatched_vulnerabilities.medium += .[1].unpatched_vulnerabilities.medium |
-              .[0].unpatched_vulnerabilities.low += .[1].unpatched_vulnerabilities.low |
-              .[0].unpatched_vulnerabilities.unknown += .[1].unpatched_vulnerabilities.unknown |
+              '.[0].vulnerabilities.critical += .[1].vulnerabilities.critical |
+              .[0].vulnerabilities.high += .[1].vulnerabilities.high |
+              .[0].vulnerabilities.medium += .[1].vulnerabilities.medium |
+              .[0].vulnerabilities.low += .[1].vulnerabilities.low |
+              .[0].vulnerabilities.unknown += .[1].vulnerabilities.unknown |
               .[0]' <<<"$scan_result $result")
 
         echo "$scan_result" | tee "$(results.SCAN_OUTPUT.path)"
