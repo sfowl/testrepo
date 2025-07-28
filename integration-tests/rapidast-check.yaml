@@ -52,6 +52,9 @@ spec:
         #!/usr/bin/env bash
         set -ex
 
+        # to share with rapidast image
+        cp utils.sh /shared
+
         cat <<< "$KUBECONFIG_VALUE" > "$KUBECONFIG"
         echo "Wrote kubeconfig for new environment to $KUBECONFIG"
 
@@ -105,7 +108,7 @@ spec:
         }
 
         # helper code from konflux-test image, includes handle_error and make_result_json
-        source /utils.sh
+        source /shared/utils.sh
         trap 'handle_error $(results.TEST_OUTPUT.path)' EXIT
 
         # Use a here document to write the multiline parameter value to the file.
