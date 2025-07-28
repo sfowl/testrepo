@@ -46,8 +46,8 @@ spec:
               key: kubeconfig
         - name: PORT_FORWARD_TARGETS
           value: "$(params.PORT_FORWARD_TARGETS)"
-      ports:
-        - containerPort: 5000
+      # ports:
+      #   - containerPort: 5000
       script: |
         #!/usr/bin/env bash
         set -ex
@@ -63,13 +63,10 @@ spec:
         check_pid_listening_port() {
             local pid=$1
             # checks that PID has at least one local port open
-            # if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN >/dev/null 2>&1; then
-            # lsof not in image, use ss instead
-            # if lsof -a -p "${pid}" -iTCP -sTCP:LISTEN; then
             if ss -tlnp | grep -q "pid=${pid},"; then
-                return 0 # PID has a listening port
+                return 0
             fi
-            return 1 # PID does not have a listening port
+            return 1
         }
         export -f check_pid_listening_port
         
