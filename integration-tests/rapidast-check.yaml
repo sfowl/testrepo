@@ -24,8 +24,9 @@ spec:
       description: The contents of a rapidast config file. Target URLs for scanning should point to localhost and match PORT_FORWARD_TARGETS.
       type: string
     - name: PORT_FORWARD_TARGETS
-      description: Scan targets in test environment and arguments for `oc port-forward` commands. Each host:port in RAPIDAST_CONFIG_VALUE requires a respective port-forward target.
+      description: Scan targets in test environment and arguments for `oc port-forward` commands. Each host:port in RAPIDAST_CONFIG_VALUE requires a respective port-forward target. Multiple values can be separated with a comma.
       default: pod/my-pod 8888:5000
+      type: string
   volumes:
     - name: shared
       emptyDir: {}
