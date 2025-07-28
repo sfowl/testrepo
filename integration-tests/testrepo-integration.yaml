@@ -1,22 +1,18 @@
+# An example Pipeline to use in an IntegrationTest, this is for a component named "test-component"
+# which would be built an a separate build pipeline
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: testrepo-integration-test
+  name: rapidast-integration-test
 spec:
   params:
+    # this SNAPSHOT should be produced by the build pipeline and contain the containerImage we want to test with rapidast
     - name: SNAPSHOT
       type: string
-      description: |
-        For simplicity, we expect a single component inside our snapshot
-          {
-            "components": [
-              {
-                "containerImage": "quay.io/example/repo:latest"
-              }
-            ]
-          }
   tasks:
     # we need an clean environment where we have permission to deploy k8s resources
+    # this env will only provide namespace-admin, not cluster-admin. For components
+    # that require a cluster-admin, an ephemeral EaaS cluster is needed
     - name: provision-env
       taskRef:
         params:
@@ -77,6 +73,7 @@ spec:
             env:
               - name: DEST_KUBECONFIG
                 value: /credentials/kubeconfig.yml
+              # used to pull SNAPSHOT image, should already exist in user namespace
               - name: PULL_SECRET
                 value: test-component-image-pull
             volumeMounts:
@@ -130,8 +127,10 @@ spec:
       params:
         - name: KUBECONFIG_SECRET
           value: "$(tasks.provision-env.results.secretRef)"
+        # this is necessary to make the target app in the remote env accessible to rapidast
         - name: PORT_FORWARD_TARGETS
           value: "deployment/test-component 5000:5000"
+        # all target URLs in rapidast config should be localhost, and port-forwarded
         - name: RAPIDAST_CONFIG_VALUE
           value: |
             config:
@@ -144,7 +143,7 @@ spec:
 
             application:
               shortName: "test-component-1.0"
-              url: "http://127.0.0.1:5000" # root URL of the application
+              url: "http://127.0.0.1:5000" # root URL of the application, should always point to localhost
 
             scanners:
               zap:

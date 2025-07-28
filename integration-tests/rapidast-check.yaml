@@ -25,8 +25,9 @@ spec:
       type: string
     - name: PORT_FORWARD_TARGETS
       description: Scan targets in test environment and arguments for `oc port-forward` commands. Each host:port in RAPIDAST_CONFIG_VALUE requires a respective port-forward target. Multiple values can be separated with a comma.
-      default: pod/my-pod 8888:5000
+      default: pod/my-pod 5000:5000
       type: string
+      # TODO add a dotenv file argument, so users can pass in .env file with secrets etc used for scanning
   volumes:
     - name: shared
       emptyDir: {}
@@ -46,10 +47,8 @@ spec:
               key: kubeconfig
         - name: PORT_FORWARD_TARGETS
           value: "$(params.PORT_FORWARD_TARGETS)"
-      # ports:
-      #   - containerPort: 5000
       script: |
-        #!/usr/bin/env bash
+        #!/bin/bash
         set -ex
 
         # to share with rapidast image
@@ -82,14 +81,16 @@ spec:
           }
         done
 
-        touch /shared/port-forward-ready
+        touch /shared/port-forward-ready # signal to rapidast container
         sleep infinity
 
   steps:
     # perform rapidast scan
     - name: rapidast-check
       image: quay.io/redhatproductsecurity/rapidast
+      # TODO add a dotenv file argument, so users can pass in .env file with secrets etc used for scanning
       env:
+        # this can be used by some rapidast generic scanners, like trivy
         - name: KUBECONFIG
           value: /shared/kubeconfig.yml
       volumeMounts:
@@ -99,6 +100,7 @@ spec:
         #!/bin/bash
         set -ex
 
+        # wait til sidecar container signals all port-fowarding is ready
         timeout 5m bash -c 'until [ -f /shared/port-forward-ready ]; do sleep 2; done' || {
           echo "[ERROR] oc port-forward commands in sidecar container not ready in time. Exiting"
           exit 1
@@ -108,8 +110,6 @@ spec:
         source /shared/utils.sh
         trap 'handle_error $(results.TEST_OUTPUT.path)' EXIT
 
-        # Use a here document to write the multiline parameter value to the file.
-        # This is the most reliable method for preserving string integrity.
         cat > /shared/rapidast-config.yaml << EOF
         $(params.RAPIDAST_CONFIG_VALUE)
         EOF
@@ -170,3 +170,5 @@ spec:
         note="Task $(context.task.name) completed: Refer to Tekton task result SCAN_OUTPUT for vulnerabilities scanned by RapiDAST."
         TEST_OUTPUT=$(make_result_json -r "SUCCESS" -t "$note")
         echo "${TEST_OUTPUT}" | tee "$(results.TEST_OUTPUT.path)"
+
+        # TODO push SARIF result file to quay.io with oras, much like sast tasks
