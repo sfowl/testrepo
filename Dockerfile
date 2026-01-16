@@ -1,5 +1,2 @@
-FROM registry.access.redhat.com/ubi8/ubi:latest
-
-COPY entrypoint.sh /
-
-ENTRYPOINT ["/entrypoint.sh"]
+# FOR TEST PURPOSES ONLY - this image has itentional security vulnerabilities
+FROM quay.io/sfowler/command-injection

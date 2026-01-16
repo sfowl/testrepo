@@ -4,19 +4,18 @@ metadata:
   annotations:
     build.appstudio.openshift.io/repo:
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
-    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
-    pipelinesascode.tekton.dev/cancel-in-progress: "true"
+    pipelinesascode.tekton.dev/cancel-in-progress: "false"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
       == "main"
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: test-component
     appstudio.openshift.io/component: test-component
     pipelines.appstudio.openshift.io/type: build
-  generateName: test-component-on-pull-request-
-  namespace: user-ns2
+  name: test-component-on-push
+  namespace: sfowler-tenant
 spec:
   params:
   - name: git-url
@@ -24,9 +23,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: registry-service.kind-registry/test-component:on-pr-{{revision}}
-  - name: image-expires-after
-    value: 5d
+    value: quay.io/redhat-user-workloads/sfowler-tenant/test-component:{{revision}}
   - name: dockerfile
     value: Dockerfile
   pipelineSpec:
